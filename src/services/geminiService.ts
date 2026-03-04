@@ -50,8 +50,8 @@ export async function predictTrends(scope: 'Global' | 'Country', country?: strin
 
 export async function generateCategoryPrompts(trend: Trend, category: string, count: number = 10, personalization?: string): Promise<GeneratedPrompt[]> {
   const personalizationContext = personalization 
-    ? `The user wants to personalize the content with: "${personalization}". Incorporate this into the prompts where appropriate.`
-    : "Include editable placeholders like [Your Name] or [Custom Message] where appropriate.";
+    ? `The user's personalization hint is: "${personalization}". Use this to inform the content of placeholders, but ALWAYS keep them as editable placeholders in the final prompt using square brackets, e.g., [${personalization}] or [YOUR NAME].`
+    : "Always include editable placeholders like [YOUR NAME] or [CUSTOM MESSAGE] where text is needed.";
 
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -60,13 +60,13 @@ export async function generateCategoryPrompts(trend: Trend, category: string, co
     
     ${personalizationContext}
     
-    Category Details:
+    Category-Specific Rules:
     - Photography: Realistic, high-quality photo descriptions for stock or professional use.
     - Vector: Clean, modern graphic design or illustration concepts.
     - AI-Generated: Detailed prompts optimized for AI image generators.
-    - Social-Media: Concepts for social media posts, posters, or flyers with editable placeholders.
-    - Image-to-Image: Specific prompts for transforming a personal photo into a themed celebration photo (outfits, poses, festive backgrounds).
-    - Photo-Editing: Instructions or prompts for editing existing photos (color grading, elements, style).
+    - Social-Media: Concepts for social media posts, posters, or flyers. Use square bracket placeholders for any text, e.g., "A sticker that says '[YOUR NAME]'".
+    - Image-to-Image: Specific prompts for transforming a personal photo into a themed celebration photo. Describe outfits, poses, and festive backgrounds. Use placeholders for text on signs or clothing, e.g., "Holding a sign that says '[GREETING]'".
+    - Photo-Editing: Universal instructions applied to a "reference photo". Start with phrases like "Apply to the reference photo...", "Enhance the reference photo by...", or "Edit the reference photo to...". Focus on color grading, lighting, and adding thematic elements.
     
     Return the data as a JSON object with a "prompts" array. Each prompt must have: type (the category name), title, prompt, and keywords (array of 10).`,
     config: {
@@ -104,8 +104,8 @@ export async function generateCategoryPrompts(trend: Trend, category: string, co
 
 export async function generateContentPrompts(trend: Trend, personalization?: string): Promise<PromptResponse> {
   const personalizationContext = personalization 
-    ? `The user wants to personalize the content with: "${personalization}". Incorporate this into the prompts where appropriate, especially for Social-Media.`
-    : "The prompt MUST include editable placeholders like [Your Name] or [Custom Message] to allow for personalization.";
+    ? `The user's personalization hint is: "${personalization}". Use this to inform the content of placeholders, but ALWAYS keep them as editable placeholders in the final prompt using square brackets, e.g., [${personalization}] or [YOUR NAME].`
+    : "Always include editable placeholders like [YOUR NAME] or [CUSTOM MESSAGE] where text is needed.";
 
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -117,10 +117,10 @@ export async function generateContentPrompts(trend: Trend, personalization?: str
     Provide one prompt for each of these categories:
     1. Photography: Realistic, high-quality photo descriptions for stock or professional use.
     2. Vector: Clean, modern graphic design or illustration concepts.
-    3. AI-Generated: Detailed prompts optimized for AI image generators (like Firefly or Midjourney).
-    4. Social-Media: Concepts for social media posts, posters, or flyers.
-    5. Image-to-Image: Specific prompts for transforming a personal photo into a themed celebration photo. Describe what the person should wear (e.g., abaya, traditional suit), their pose (e.g., hands together for greeting), and the festive background.
-    6. Photo-Editing: Instructions or prompts for editing existing photos to match the theme (e.g., color grading, adding elements, or style transfers).
+    3. AI-Generated: Detailed prompts optimized for AI image generators.
+    4. Social-Media: Concepts for social media posts, posters, or flyers. Use square bracket placeholders for any text, e.g., "[YOUR NAME]".
+    5. Image-to-Image: Specific prompts for transforming a personal photo into a themed celebration photo. Describe outfits, poses, and festive backgrounds. Use placeholders for text, e.g., "[GREETING]".
+    6. Photo-Editing: Universal instructions applied to a "reference photo". Start with phrases like "Apply to the reference photo...". Focus on color grading and lighting.
     
     For each, include a catchy title, the prompt itself, and 10 relevant keywords.`,
     config: {
