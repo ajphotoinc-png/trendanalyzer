@@ -31,6 +31,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterScope, setFilterScope] = useState<'Global' | 'Country' | null>(null);
   const [countryInput, setCountryInput] = useState('');
+  const [personalization, setPersonalization] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [predictedTrends, setPredictedTrends] = useState<Trend[]>([]);
 
@@ -61,6 +62,7 @@ export default function App() {
     setFilterScope(null);
     setHasSearched(false);
     setCountryInput('');
+    setPersonalization('');
     setSearchTerm('');
     setSelectedTrend(null);
     setPrompts([]);
@@ -72,7 +74,7 @@ export default function App() {
     setLoading(true);
     setPrompts([]);
     try {
-      const result = await generateContentPrompts(trend);
+      const result = await generateContentPrompts(trend, personalization);
       setPrompts(result.prompts);
     } catch (error) {
       console.error('Error generating prompts:', error);
@@ -139,6 +141,21 @@ export default function App() {
                   </div>
                   
                   <div className="space-y-4">
+                    <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-indigo-900">Personalize (Optional)</span>
+                        <User className="w-5 h-5 text-indigo-400" />
+                      </div>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. From Aji & Keluarga"
+                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                        value={personalization}
+                        onChange={(e) => setPersonalization(e.target.value)}
+                      />
+                      <p className="text-[10px] text-indigo-600/60">This will be included in your Social Media & Image-to-Image prompts.</p>
+                    </div>
+
                     <button
                       onClick={() => handleSearch('Global')}
                       className="w-full p-4 bg-indigo-50 border border-indigo-100 rounded-2xl text-left hover:bg-indigo-100 transition-all group"

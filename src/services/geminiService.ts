@@ -48,17 +48,23 @@ export async function predictTrends(scope: 'Global' | 'Country', country?: strin
   return JSON.parse(text) as Trend[];
 }
 
-export async function generateContentPrompts(trend: Trend): Promise<PromptResponse> {
+export async function generateContentPrompts(trend: Trend, personalization?: string): Promise<PromptResponse> {
+  const personalizationContext = personalization 
+    ? `The user wants to personalize the content with: "${personalization}". Incorporate this into the prompts where appropriate, especially for Social-Media.`
+    : "The prompt MUST include editable placeholders like [Your Name] or [Custom Message] to allow for personalization.";
+
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: `Generate 6 high-quality content prompts for the upcoming trend: "${trend.name}". 
     The trend is described as: ${trend.description}.
     
+    ${personalizationContext}
+    
     Provide one prompt for each of these categories:
     1. Photography: Realistic, high-quality photo descriptions for stock or professional use.
     2. Vector: Clean, modern graphic design or illustration concepts.
     3. AI-Generated: Detailed prompts optimized for AI image generators (like Firefly or Midjourney).
-    4. Social-Media: Concepts for social media posts, posters, or flyers (e.g., greetings, announcements).
+    4. Social-Media: Concepts for social media posts, posters, or flyers.
     5. Image-to-Image: Specific prompts for transforming a personal photo into a themed celebration photo. Describe what the person should wear (e.g., abaya, traditional suit), their pose (e.g., hands together for greeting), and the festive background.
     6. Photo-Editing: Instructions or prompts for editing existing photos to match the theme (e.g., color grading, adding elements, or style transfers).
     
