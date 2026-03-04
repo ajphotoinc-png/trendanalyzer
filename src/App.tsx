@@ -16,29 +16,53 @@ import {
   Heart,
   Zap
 } from 'lucide-react';
-import { UPCOMING_TRENDS } from './constants';
 import { Trend, GeneratedPrompt } from './types';
-import { generateStockPrompts } from './services/geminiService';
+import { generateStockPrompts, predictTrends } from './services/geminiService';
 
 export default function App() {
   const [selectedTrend, setSelectedTrend] = useState<Trend | null>(null);
   const [prompts, setPrompts] = useState<GeneratedPrompt[]>([]);
   const [loading, setLoading] = useState(false);
+  const [predictingTrends, setPredictingTrends] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState<string>('All');
+  const [filterScope, setFilterScope] = useState<'Global' | 'Country' | null>(null);
+  const [countryInput, setCountryInput] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+  const [predictedTrends, setPredictedTrends] = useState<Trend[]>([]);
 
-  const regions = ['All', 'Global', 'Asia', 'Europe', 'Americas', 'Middle East', 'Africa'];
-
-  const filteredTrends = UPCOMING_TRENDS.filter(trend => {
-    const matchesSearch = trend.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trend.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (trend.country && trend.country.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesRegion = selectedRegion === 'All' || trend.region === selectedRegion;
-    
-    return matchesSearch && matchesRegion;
+  const filteredTrends = predictedTrends.filter(trend => {
+    return trend.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      trend.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
   });
+
+  const handleSearch = async (scope: 'Global' | 'Country') => {
+    setFilterScope(scope);
+    setPredictingTrends(true);
+    setHasSearched(true);
+    setPredictedTrends([]);
+    setSelectedTrend(null);
+    setPrompts([]);
+    
+    try {
+      const trends = await predictTrends(scope, scope === 'Country' ? countryInput : undefined);
+      setPredictedTrends(trends);
+    } catch (error) {
+      console.error('Error predicting trends:', error);
+    } finally {
+      setPredictingTrends(false);
+    }
+  };
+
+  const resetSearch = () => {
+    setFilterScope(null);
+    setHasSearched(false);
+    setCountryInput('');
+    setSearchTerm('');
+    setSelectedTrend(null);
+    setPrompts([]);
+    setPredictedTrends([]);
+  };
 
   const handleGenerate = async (trend: Trend) => {
     setSelectedTrend(trend);
@@ -103,81 +127,127 @@ export default function App() {
           
           {/* Sidebar: Trends List */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-indigo-600" />
-                  Upcoming Trends
-                </h2>
-                <span className="text-xs font-medium bg-indigo-50 text-indigo-600 px-2 py-1 rounded-full">
-                  2026 Season
-                </span>
-              </div>
-
-              {/* Search */}
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search trends, tags, or country..."
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-
-              {/* Region Filter */}
-              <div className="flex flex-wrap gap-2 mb-6">
-                {regions.map(region => (
-                  <button
-                    key={region}
-                    onClick={() => setSelectedRegion(region)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      selectedRegion === region 
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' 
-                        : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                    }`}
-                  >
-                    {region}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-3">
-                {filteredTrends.map((trend) => (
-                  <button
-                    key={trend.id}
-                    onClick={() => handleGenerate(trend)}
-                    className={`w-full text-left p-4 rounded-xl border transition-all group ${
-                      selectedTrend?.id === trend.id 
-                        ? 'bg-indigo-50 border-indigo-200 shadow-sm' 
-                        : 'bg-white border-slate-100 hover:border-indigo-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        {getCategoryIcon(trend.category)}
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                          {trend.category}
-                        </span>
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm min-h-[400px]">
+              {!hasSearched ? (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-5 h-5 text-indigo-600" />
+                    <h2 className="text-lg font-bold">Find Trends</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => handleSearch('Global')}
+                      className="w-full p-4 bg-indigo-50 border border-indigo-100 rounded-2xl text-left hover:bg-indigo-100 transition-all group"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-indigo-900">Global Trends</span>
+                        <Globe className="w-5 h-5 text-indigo-600 group-hover:scale-110 transition-transform" />
                       </div>
-                      <ChevronRight className={`w-4 h-4 transition-transform ${selectedTrend?.id === trend.id ? 'translate-x-1 text-indigo-600' : 'text-slate-300 group-hover:translate-x-1'}`} />
-                    </div>
-                    <h3 className="font-bold text-slate-800 mb-1">{trend.name}</h3>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                        <Calendar className="w-3 h-3" />
-                        {trend.date}
+                      <p className="text-xs text-indigo-600/70">Worldwide seasonal events and holidays</p>
+                    </button>
+
+                    <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-900">Search by Country</span>
+                        <Search className="w-5 h-5 text-slate-400" />
                       </div>
-                      {trend.country && (
-                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
-                          {trend.country}
-                        </span>
-                      )}
+                      <input 
+                        type="text" 
+                        placeholder="Enter country name..."
+                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                        value={countryInput}
+                        onChange={(e) => setCountryInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && countryInput && handleSearch('Country')}
+                      />
+                      <button
+                        disabled={!countryInput}
+                        onClick={() => handleSearch('Country')}
+                        className="w-full py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        Search Country
+                      </button>
                     </div>
-                  </button>
-                ))}
-              </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <button 
+                      onClick={resetSearch}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                    >
+                      <ChevronRight className="w-3 h-3 rotate-180" />
+                      Back to Start
+                    </button>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      {filterScope === 'Global' ? 'Global' : countryInput}
+                    </span>
+                  </div>
+
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Filter results..."
+                      className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    {predictingTrends ? (
+                      <div className="py-12 flex flex-col items-center justify-center text-center">
+                        <motion.div 
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                          className="w-8 h-8 border-2 border-indigo-100 border-t-indigo-600 rounded-full mb-4"
+                        />
+                        <p className="text-xs text-slate-400 font-medium italic">Predicting trends for 2026...</p>
+                      </div>
+                    ) : filteredTrends.length > 0 ? (
+                      filteredTrends.map((trend) => (
+                        <button
+                          key={trend.id}
+                          onClick={() => handleGenerate(trend)}
+                          className={`w-full text-left p-4 rounded-xl border transition-all group ${
+                            selectedTrend?.id === trend.id 
+                              ? 'bg-indigo-50 border-indigo-200 shadow-sm' 
+                              : 'bg-white border-slate-100 hover:border-indigo-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {getCategoryIcon(trend.category)}
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                {trend.category}
+                              </span>
+                            </div>
+                            <ChevronRight className={`w-4 h-4 transition-transform ${selectedTrend?.id === trend.id ? 'translate-x-1 text-indigo-600' : 'text-slate-300 group-hover:translate-x-1'}`} />
+                          </div>
+                          <h3 className="font-bold text-slate-800 mb-1">{trend.name}</h3>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                              <Calendar className="w-3 h-3" />
+                              {trend.date}
+                            </div>
+                            {trend.country && (
+                              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                                {trend.country}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="text-center py-12">
+                        <p className="text-sm text-slate-400">No trends found for this search.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">

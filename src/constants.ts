@@ -86,5 +86,55 @@ export const UPCOMING_TRENDS: Trend[] = [
     country: 'India',
     description: 'Major Hindu festival celebrating the victory of light over darkness. Focus on oil lamps (diyas), fireworks, and sweets.',
     tags: ['India', 'Lights', 'Celebration', 'Hinduism', 'Culture']
+  },
+  {
+    id: 'thanksgiving-us-2026',
+    name: 'Thanksgiving Day',
+    date: 'November 26, 2026',
+    category: 'Holiday',
+    region: 'Americas',
+    country: 'USA',
+    description: 'Traditional American holiday for giving thanks. Focus on turkey dinner, family gatherings, and autumn harvest.',
+    tags: ['USA', 'Thanksgiving', 'Family', 'Food', 'Autumn']
+  },
+  {
+    id: 'lunar-new-year-cn-2026',
+    name: 'Lunar New Year (Year of the Horse)',
+    date: 'February 17, 2026',
+    category: 'Holiday',
+    region: 'Asia',
+    country: 'China',
+    description: 'The most important traditional Chinese festival. Focus on red envelopes, lanterns, dragon dances, and family reunion.',
+    tags: ['China', 'New Year', 'Tradition', 'Red', 'Celebration']
+  },
+  {
+    id: 'bastille-day-fr-2026',
+    name: 'Bastille Day (Fête Nationale)',
+    date: 'July 14, 2026',
+    category: 'Holiday',
+    region: 'Europe',
+    country: 'France',
+    description: 'National Day of France. Focus on military parades, fireworks, and the French tricolor flag.',
+    tags: ['France', 'Patriotism', 'Paris', 'Flag', 'Summer']
+  },
+  {
+    id: 'carnival-br-2026',
+    name: 'Rio Carnival',
+    date: 'February 13-18, 2026',
+    category: 'Holiday',
+    region: 'Americas',
+    country: 'Brazil',
+    description: 'World-famous carnival in Rio de Janeiro. Focus on samba dancers, elaborate costumes, and vibrant street parties.',
+    tags: ['Brazil', 'Carnival', 'Dance', 'Costume', 'Vibrant']
+  },
+  {
+    id: 'songkran-th-2026',
+    name: 'Songkran (Water Festival)',
+    date: 'April 13-15, 2026',
+    category: 'Holiday',
+    region: 'Asia',
+    country: 'Thailand',
+    description: 'Thai New Year festival known for water fights. Focus on water splashing, traditional Thai clothing, and temple visits.',
+    tags: ['Thailand', 'Water', 'New Year', 'Tradition', 'Fun']
   }
 ];
