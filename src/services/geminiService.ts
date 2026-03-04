@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Trend, PromptResponse } from "../types";
+import { Trend, PromptResponse, GeneratedPrompt } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
@@ -46,6 +46,60 @@ export async function predictTrends(scope: 'Global' | 'Country', country?: strin
   const text = response.text;
   if (!text) throw new Error("Failed to predict trends");
   return JSON.parse(text) as Trend[];
+}
+
+export async function generateCategoryPrompts(trend: Trend, category: string, count: number = 10, personalization?: string): Promise<GeneratedPrompt[]> {
+  const personalizationContext = personalization 
+    ? `The user wants to personalize the content with: "${personalization}". Incorporate this into the prompts where appropriate.`
+    : "Include editable placeholders like [Your Name] or [Custom Message] where appropriate.";
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: `Generate ${count} unique and high-quality content prompts for the trend: "${trend.name}" specifically for the category: "${category}".
+    Trend description: ${trend.description}.
+    
+    ${personalizationContext}
+    
+    Category Details:
+    - Photography: Realistic, high-quality photo descriptions for stock or professional use.
+    - Vector: Clean, modern graphic design or illustration concepts.
+    - AI-Generated: Detailed prompts optimized for AI image generators.
+    - Social-Media: Concepts for social media posts, posters, or flyers with editable placeholders.
+    - Image-to-Image: Specific prompts for transforming a personal photo into a themed celebration photo (outfits, poses, festive backgrounds).
+    - Photo-Editing: Instructions or prompts for editing existing photos (color grading, elements, style).
+    
+    Return the data as a JSON object with a "prompts" array. Each prompt must have: type (the category name), title, prompt, and keywords (array of 10).`,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          prompts: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                type: { type: Type.STRING },
+                title: { type: Type.STRING },
+                prompt: { type: Type.STRING },
+                keywords: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING }
+                }
+              },
+              required: ["type", "title", "prompt", "keywords"]
+            }
+          }
+        },
+        required: ["prompts"]
+      }
+    }
+  });
+
+  const text = response.text;
+  if (!text) throw new Error("Failed to generate category prompts");
+  const result = JSON.parse(text);
+  return result.prompts as GeneratedPrompt[];
 }
 
 export async function generateContentPrompts(trend: Trend, personalization?: string): Promise<PromptResponse> {

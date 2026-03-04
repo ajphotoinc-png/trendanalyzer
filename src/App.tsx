@@ -20,12 +20,14 @@ import {
   Image
 } from 'lucide-react';
 import { Trend, GeneratedPrompt } from './types';
-import { generateContentPrompts, predictTrends } from './services/geminiService';
+import { generateContentPrompts, predictTrends, generateCategoryPrompts } from './services/geminiService';
 
 export default function App() {
   const [selectedTrend, setSelectedTrend] = useState<Trend | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [prompts, setPrompts] = useState<GeneratedPrompt[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [predictingTrends, setPredictingTrends] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +36,15 @@ export default function App() {
   const [personalization, setPersonalization] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [predictedTrends, setPredictedTrends] = useState<Trend[]>([]);
+
+  const categories = [
+    { id: 'Photography', icon: <Camera className="w-6 h-6" />, color: 'bg-blue-100 text-blue-600', desc: 'Stock & Professional Photos' },
+    { id: 'Vector', icon: <Palette className="w-6 h-6" />, color: 'bg-orange-100 text-orange-600', desc: 'Illustrations & Graphics' },
+    { id: 'AI-Generated', icon: <Cpu className="w-6 h-6" />, color: 'bg-purple-100 text-purple-600', desc: 'Pure AI Image Prompts' },
+    { id: 'Social-Media', icon: <Share2 className="w-6 h-6" />, color: 'bg-emerald-100 text-emerald-600', desc: 'Posters, Flyers & Greetings' },
+    { id: 'Image-to-Image', icon: <User className="w-6 h-6" />, color: 'bg-rose-100 text-rose-600', desc: 'Transform Personal Photos' },
+    { id: 'Photo-Editing', icon: <Image className="w-6 h-6" />, color: 'bg-indigo-100 text-indigo-600', desc: 'Manual Editing Guides' },
+  ];
 
   const filteredTrends = predictedTrends.filter(trend => {
     return trend.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -65,21 +76,42 @@ export default function App() {
     setPersonalization('');
     setSearchTerm('');
     setSelectedTrend(null);
+    setSelectedCategory(null);
     setPrompts([]);
     setPredictedTrends([]);
   };
 
-  const handleGenerate = async (trend: Trend) => {
+  const handleTrendSelect = (trend: Trend) => {
     setSelectedTrend(trend);
+    setSelectedCategory(null);
+    setPrompts([]);
+  };
+
+  const handleCategorySelect = async (category: string) => {
+    if (!selectedTrend) return;
+    setSelectedCategory(category);
     setLoading(true);
     setPrompts([]);
     try {
-      const result = await generateContentPrompts(trend, personalization);
-      setPrompts(result.prompts);
+      const result = await generateCategoryPrompts(selectedTrend, category, 10, personalization);
+      setPrompts(result);
     } catch (error) {
-      console.error('Error generating prompts:', error);
+      console.error('Error generating category prompts:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (!selectedTrend || !selectedCategory) return;
+    setLoadingMore(true);
+    try {
+      const result = await generateCategoryPrompts(selectedTrend, selectedCategory, 10, personalization);
+      setPrompts(prev => [...prev, ...result]);
+    } catch (error) {
+      console.error('Error loading more prompts:', error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -230,7 +262,7 @@ export default function App() {
                       filteredTrends.map((trend) => (
                         <button
                           key={trend.id}
-                          onClick={() => handleGenerate(trend)}
+                          onClick={() => handleTrendSelect(trend)}
                           className={`w-full text-left p-4 rounded-xl border transition-all group ${
                             selectedTrend?.id === trend.id 
                               ? 'bg-indigo-50 border-indigo-200 shadow-sm' 
@@ -319,102 +351,139 @@ export default function App() {
                       <p className="text-slate-600 text-lg leading-relaxed max-w-2xl">
                         {selectedTrend.description}
                       </p>
-                      <div className="flex flex-wrap gap-2 mt-6">
-                        {selectedTrend.tags.map(tag => (
-                          <span key={tag} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                      {getCategoryIcon(selectedTrend.category)}
                     </div>
                   </div>
 
-                  {/* Generation Status */}
-                  {loading ? (
-                    <div className="bg-white rounded-3xl p-20 border border-slate-200 flex flex-col items-center justify-center text-center">
-                      <div className="relative">
-                        <motion.div 
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                          className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full"
-                        />
-                        <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-indigo-600" />
-                      </div>
-                      <h3 className="mt-8 text-xl font-bold text-slate-800">Analyzing Market Trends...</h3>
-                      <p className="mt-2 text-slate-500">Gemini is crafting high-conversion prompts for you.</p>
+                  {/* Category Selection or Prompts */}
+                  {!selectedCategory ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {categories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => handleCategorySelect(cat.id)}
+                          className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all text-left group"
+                        >
+                          <div className={`w-12 h-12 rounded-2xl ${cat.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                            {cat.icon}
+                          </div>
+                          <h4 className="font-bold text-slate-900 mb-1">{cat.id.replace('-', ' ')}</h4>
+                          <p className="text-xs text-slate-500 leading-relaxed">{cat.desc}</p>
+                        </button>
+                      ))}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-6">
-                      {prompts.map((p, idx) => (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.1 }}
-                          key={idx}
-                          className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden group hover:border-indigo-300 transition-all"
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <button 
+                          onClick={() => setSelectedCategory(null)}
+                          className="flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700"
                         >
-                          <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-xl ${
-                                p.type === 'Photography' ? 'bg-blue-100 text-blue-600' :
-                                p.type === 'Vector' ? 'bg-orange-100 text-orange-600' :
-                                p.type === 'AI-Generated' ? 'bg-purple-100 text-purple-600' :
-                                p.type === 'Social-Media' ? 'bg-emerald-100 text-emerald-600' :
-                                p.type === 'Image-to-Image' ? 'bg-rose-100 text-rose-600' :
-                                'bg-indigo-100 text-indigo-600'
-                              }`}>
-                                {p.type === 'Photography' && <Camera className="w-5 h-5" />}
-                                {p.type === 'Vector' && <Palette className="w-5 h-5" />}
-                                {p.type === 'AI-Generated' && <Cpu className="w-5 h-5" />}
-                                {p.type === 'Social-Media' && <Share2 className="w-5 h-5" />}
-                                {p.type === 'Image-to-Image' && <User className="w-5 h-5" />}
-                                {p.type === 'Photo-Editing' && <Image className="w-5 h-5" />}
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-slate-900">{p.type.replace('-', ' ')}</h4>
-                                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Content Category</p>
-                              </div>
-                            </div>
-                            <button 
-                              onClick={() => copyToClipboard(p.prompt, idx)}
-                              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+                          <ChevronRight className="w-4 h-4 rotate-180" />
+                          Back to Categories
+                        </button>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Category:</span>
+                          <span className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold">{selectedCategory.replace('-', ' ')}</span>
+                        </div>
+                      </div>
+
+                      {loading ? (
+                        <div className="bg-white rounded-3xl p-20 border border-slate-200 flex flex-col items-center justify-center text-center">
+                          <div className="relative">
+                            <motion.div 
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                              className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full"
+                            />
+                            <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-indigo-600" />
+                          </div>
+                          <h3 className="mt-8 text-xl font-bold text-slate-800">Generating 10 Prompts...</h3>
+                          <p className="mt-2 text-slate-500">Crafting high-quality concepts for {selectedCategory.replace('-', ' ')}.</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-1 gap-6">
+                            {prompts.map((p, idx) => (
+                              <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: (idx % 10) * 0.05 }}
+                                key={idx}
+                                className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden group hover:border-indigo-300 transition-all"
+                              >
+                                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-xl ${
+                                      categories.find(c => c.id === p.type)?.color || 'bg-slate-100 text-slate-600'
+                                    }`}>
+                                      {categories.find(c => c.id === p.type)?.icon}
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-slate-900">{p.title}</h4>
+                                      <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">#{idx + 1} Prompt</p>
+                                    </div>
+                                  </div>
+                                  <button 
+                                    onClick={() => copyToClipboard(p.prompt, idx)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+                                  >
+                                    {copiedIndex === idx ? (
+                                      <>
+                                        <Check className="w-4 h-4 text-emerald-500" />
+                                        <span className="text-emerald-600">Copied!</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="w-4 h-4" />
+                                        <span>Copy Prompt</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                                <div className="p-8">
+                                  <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 mb-6 font-mono text-sm text-slate-700 leading-relaxed relative">
+                                    {p.prompt}
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Recommended Keywords</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {p.keywords.map(kw => (
+                                        <span key={kw} className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium border border-indigo-100">
+                                          {kw}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+
+                          <div className="flex justify-center pt-8">
+                            <button
+                              onClick={handleLoadMore}
+                              disabled={loadingMore}
+                              className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-xl disabled:opacity-50"
                             >
-                              {copiedIndex === idx ? (
+                              {loadingMore ? (
                                 <>
-                                  <Check className="w-4 h-4 text-emerald-500" />
-                                  <span className="text-emerald-600">Copied!</span>
+                                  <motion.div 
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full"
+                                  />
+                                  <span>Generating 10 More...</span>
                                 </>
                               ) : (
                                 <>
-                                  <Copy className="w-4 h-4" />
-                                  <span>Copy Prompt</span>
+                                  <Zap className="w-5 h-5" />
+                                  <span>Load 10 More Prompts</span>
                                 </>
                               )}
                             </button>
                           </div>
-                          <div className="p-8">
-                            <h5 className="text-xl font-bold text-slate-800 mb-4 leading-tight">
-                              {p.title}
-                            </h5>
-                            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 mb-6 font-mono text-sm text-slate-700 leading-relaxed relative">
-                              {p.prompt}
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Recommended Keywords</p>
-                              <div className="flex flex-wrap gap-2">
-                                {p.keywords.map(kw => (
-                                  <span key={kw} className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium border border-indigo-100">
-                                    {kw}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
+                        </>
+                      )}
                     </div>
                   )}
                 </motion.div>
