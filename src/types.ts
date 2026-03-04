@@ -10,7 +10,7 @@ export interface Trend {
 }
 
 export interface GeneratedPrompt {
-  type: 'Photography' | 'Vector' | 'AI-Generated';
+  type: 'Photography' | 'Vector' | 'AI-Generated' | 'Social-Media' | 'Image-to-Image' | 'Photo-Editing';
   prompt: string;
   keywords: string[];
   title: string;

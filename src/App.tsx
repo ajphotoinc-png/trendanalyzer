@@ -14,10 +14,13 @@ import {
   Clock,
   Globe,
   Heart,
-  Zap
+  Zap,
+  Share2,
+  User,
+  Image
 } from 'lucide-react';
 import { Trend, GeneratedPrompt } from './types';
-import { generateStockPrompts, predictTrends } from './services/geminiService';
+import { generateContentPrompts, predictTrends } from './services/geminiService';
 
 export default function App() {
   const [selectedTrend, setSelectedTrend] = useState<Trend | null>(null);
@@ -69,7 +72,7 @@ export default function App() {
     setLoading(true);
     setPrompts([]);
     try {
-      const result = await generateStockPrompts(trend);
+      const result = await generateContentPrompts(trend);
       setPrompts(result.prompts);
     } catch (error) {
       console.error('Error generating prompts:', error);
@@ -341,15 +344,21 @@ export default function App() {
                               <div className={`p-2 rounded-xl ${
                                 p.type === 'Photography' ? 'bg-blue-100 text-blue-600' :
                                 p.type === 'Vector' ? 'bg-orange-100 text-orange-600' :
-                                'bg-purple-100 text-purple-600'
+                                p.type === 'AI-Generated' ? 'bg-purple-100 text-purple-600' :
+                                p.type === 'Social-Media' ? 'bg-emerald-100 text-emerald-600' :
+                                p.type === 'Image-to-Image' ? 'bg-rose-100 text-rose-600' :
+                                'bg-indigo-100 text-indigo-600'
                               }`}>
                                 {p.type === 'Photography' && <Camera className="w-5 h-5" />}
                                 {p.type === 'Vector' && <Palette className="w-5 h-5" />}
                                 {p.type === 'AI-Generated' && <Cpu className="w-5 h-5" />}
+                                {p.type === 'Social-Media' && <Share2 className="w-5 h-5" />}
+                                {p.type === 'Image-to-Image' && <User className="w-5 h-5" />}
+                                {p.type === 'Photo-Editing' && <Image className="w-5 h-5" />}
                               </div>
                               <div>
-                                <h4 className="font-bold text-slate-900">{p.type}</h4>
-                                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Format Type</p>
+                                <h4 className="font-bold text-slate-900">{p.type.replace('-', ' ')}</h4>
+                                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Content Category</p>
                               </div>
                             </div>
                             <button 

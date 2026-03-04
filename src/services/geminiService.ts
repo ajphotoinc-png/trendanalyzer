@@ -48,16 +48,19 @@ export async function predictTrends(scope: 'Global' | 'Country', country?: strin
   return JSON.parse(text) as Trend[];
 }
 
-export async function generateStockPrompts(trend: Trend): Promise<PromptResponse> {
+export async function generateContentPrompts(trend: Trend): Promise<PromptResponse> {
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `Generate 3 high-quality Adobe Stock content prompts for the upcoming trend: "${trend.name}". 
+    contents: `Generate 6 high-quality content prompts for the upcoming trend: "${trend.name}". 
     The trend is described as: ${trend.description}.
     
-    Provide one prompt for each category:
-    1. Photography: Realistic, high-quality photo descriptions.
+    Provide one prompt for each of these categories:
+    1. Photography: Realistic, high-quality photo descriptions for stock or professional use.
     2. Vector: Clean, modern graphic design or illustration concepts.
     3. AI-Generated: Detailed prompts optimized for AI image generators (like Firefly or Midjourney).
+    4. Social-Media: Concepts for social media posts, posters, or flyers (e.g., greetings, announcements).
+    5. Image-to-Image: Specific prompts for transforming a personal photo into a themed celebration photo. Describe what the person should wear (e.g., abaya, traditional suit), their pose (e.g., hands together for greeting), and the festive background.
+    6. Photo-Editing: Instructions or prompts for editing existing photos to match the theme (e.g., color grading, adding elements, or style transfers).
     
     For each, include a catchy title, the prompt itself, and 10 relevant keywords.`,
     config: {
